@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="map_file" default="$(find mcl)/mapdata/map.yaml" />
+
+    <!-- map server -->
+    <node pkg="map_server" type="map_server" name="global_map" args="$(arg map_file)" />
+
+    <!-- mcl -->
+    <node pkg="mcl" type="mcl_node" name="mcl_node" output="screen" />
+
+</launch>

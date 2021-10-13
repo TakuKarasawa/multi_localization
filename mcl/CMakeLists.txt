@@ -30,8 +30,15 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
 )
 
-add_executable(mcl src/mcl.cpp)
+add_library(${PROJECT_NAME} src/mcl.cpp)
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 
-add_dependencies(mcl ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(mcl ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(mcl_node
+    src/mcl_node.cpp
+    src/mcl.cpp
+)
+
+add_dependencies(mcl_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(mcl_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
