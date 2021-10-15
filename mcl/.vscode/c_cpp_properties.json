@@ -30,7 +30,8 @@
                 "/home/amsl/catkin_ws/src/theta_s_ros/include/**",
                 "/usr/include/**",
                 "${workspaceFolder}/include",
-                "/opt/ros/noetic/include"
+                "/opt/ros/noetic/include",
+                "/home/amsl/catkin_ws/src/multi_robot/tf_tools/include"
             ],
             "name": "ROS",
             "intelliSenseMode": "gcc-x64",
