@@ -17,4 +17,16 @@
         <rosparam command="load" file="$(find mcl)/config/mcl/mcl.yaml" />
     </node>
 
+    <!-- tf -->
+    <node pkg="mcl" type="tf_broadcaster_node" name="tf_broadcaster_node" >
+        <param name="odom_topic_name" value="roomba/odometry" />
+        <param name="odom_frame_id" value="odom" />
+        <param name="base_link_frame_id" value="base_link" />
+        <param name="lidar_frame_id" value="scan" />
+        <param name="thetas_frame_id" value="theta_s" />
+        <param name="dynamixel_frame_id" value="dynamixel" />
+        <param name="realsense_frame_id" value="realsense" />
+        <rosparam command="load" file="$(find mcl)/config/tf/tf.yaml" />
+    </node>
+
 </launch>
