@@ -23,7 +23,7 @@ public:
     ~MCL();
     void process();
 
-private:
+protected:
     class Particle
     {
     public:
@@ -81,6 +81,8 @@ private:
     sensor_msgs::LaserScan scan_;
 
     std::vector<Particle> particles_;
+    std::random_device seed_;
+    std::mt19937 engine_;
 
 
     // parameter

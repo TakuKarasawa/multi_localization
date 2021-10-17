@@ -1,10 +1,8 @@
 #include "mcl/mcl.h"
 
-std::random_device seed;
-std::mt19937 engine(seed());
-
 MCL::MCL() : 
     private_nh_("~"),
+    engine_(seed_()),
     has_received_map_(false), is_update_(false),
     x_cov_(0.5), y_cov_(0.5), yaw_cov_(0.5),
     likelihood_fast_(0.0), likelihood_slow_(0.0),
@@ -84,7 +82,7 @@ void MCL::Particle::init(double x,double y,double yaw,double x_cov,double y_cov,
         std::normal_distribution<> dist_x(x,x_cov);
         std::normal_distribution<> dist_y(y,y_cov);
         std::normal_distribution<> dist_yaw(yaw,yaw_cov);
-        m_->set_pose(pose_,dist_x(engine),dist_y(engine),dist_yaw(engine));
+        m_->set_pose(pose_,dist_x(m_->engine_),dist_y(m_->engine_),dist_yaw(m_->engine_));
     }while(m_->map_grid_data(pose_.pose.position.x,pose_.pose.position.y) != 0);   
 }
 
@@ -124,9 +122,9 @@ void MCL::Particle::move(double dx,double dy,double dyaw)
     std::normal_distribution<> dist_rot2(0.0,(m_->ALPHA_1_*delta_rot2_noise*delta_rot2_noise - m_->ALPHA_2_*delta_trans*delta_trans));
     std::normal_distribution<> dist_trans(0.0,(m_->ALPHA_3_*delta_trans*delta_trans + m_->ALPHA_4_*delta_rot1_noise*delta_rot1_noise + m_->ALPHA_4_*delta_rot2_noise*delta_rot2_noise));
 
-    double delta_rot1_hat  = m_->calc_angle_diff(delta_rot1,dist_rot1(engine));
-    double delta_rot2_hat  = m_->calc_angle_diff(delta_rot2,dist_rot2(engine));
-    double delta_trans_hat = delta_trans - dist_trans(engine);
+    double delta_rot1_hat  = m_->calc_angle_diff(delta_rot1,dist_rot1(m_->engine_));
+    double delta_rot2_hat  = m_->calc_angle_diff(delta_rot2,dist_rot2(m_->engine_));
+    double delta_trans_hat = delta_trans - dist_trans(m_->engine_);
 
     m_->set_pose(pose_,
                  pose_.pose.position.x + delta_trans_hat * std::cos(yaw + delta_rot1_hat),
@@ -272,7 +270,7 @@ void MCL::calc_likelihood()
 void MCL::resampling()
 {
     std::uniform_real_distribution<> dist(0.0,1.0);
-    int index = (int)(dist(engine)*NUM_OF_PARTICLES_);
+    int index = (int)(dist(engine_)*NUM_OF_PARTICLES_);
     double beta = 0.0;
     double mv   = particles_[max_index_].likelihood_;
         
@@ -282,8 +280,8 @@ void MCL::resampling()
     else l = 0.0;
 
     for(int i = 0; i < NUM_OF_PARTICLES_; i++){
-        if(l < dist(engine)){
-            beta += dist(engine) * 2.0 * mv;
+        if(l < dist(engine_)){
+            beta += dist(engine_) * 2.0 * mv;
             while(beta > particles_[index].likelihood_){
                 beta -= particles_[index].likelihood_;
                 index = (index + 1)%NUM_OF_PARTICLES_;

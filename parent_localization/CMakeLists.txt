@@ -27,15 +27,17 @@ catkin_package(
 
 include_directories(
     include
+    ../mcl/include
     ${catkin_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
     ${Eigen3_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/parent_mcl.cpp)
+add_library(${PROJECT_NAME} ../mcl/src/mcl.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 
 add_executable(parent_mcl_node
+    ../mcl/src/mcl.cpp
     src/parent_mcl_node.cpp
     src/parent_mcl.cpp
 )
