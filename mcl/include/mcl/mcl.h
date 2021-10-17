@@ -81,7 +81,7 @@ private:
     sensor_msgs::LaserScan scan_;
 
     std::vector<Particle> particles_;
-    
+
 
     // parameter
     std::string map_topic_name_;
