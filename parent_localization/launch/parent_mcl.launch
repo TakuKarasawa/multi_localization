@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="map_file" default="$(find mcl)/mapdata/map.yaml" />
+    <arg name="manager_name" default="nodelet_magager" />
+
+    <!-- map server -->
+    <node pkg="map_server" type="map_server" name="global_map" args="$(arg map_file)" />
+
+    <!-- rviz -->
+    <!--<node pkg="rviz" type="rviz" name="rviz" args="-d $(find mcl)/config/rviv/rviz.rviz" />-->
+
+    <!-- parent_mcl -->
+    <node pkg="parent_localization" type="parent_mcl_node" name="parent_mcl_node" output="screen" >
+        <param name="scan_topic_name" value="/scan" />
+        <param name="map_topic_name" value="/map" />
+        <param name="est_pose_topic_name" value="/est_pose" />
+        <param name="est_poses_topic_name" value="/est_poses" />
+        <param name="obj_topic_name" value="object_positions"/>
+        <param name="markers_topic_name" value="markers"/>
+        <param name="map_frame_id" value="map" />
+        <param name="odom_frame_id" value="odom" />
+        <param name="base_link_frame_id" value="base_link" />
+        <rosparam command="load" file="$(find parent_localization)/config/parent_mcl/parent_mcl.yaml" />
+    </node>
+
+    <!-- point_cloud_object_detector_node -->
+    <!--<node pkg="point_cloud_object_detector" type="point_cloud_object_detector_node" name="object_detector" >
+        <remap from="pc_topic_name" to="/camera/depth_registered/points" />
+        <remap from="bbox_topic_name" to="/darknet_ros/bounding_boxes" />
+        <remap from="obj_topic_name" to="/object_positions" />
+        <remap from="obj_frame_name" to="/base_link" />
+    </node>-->
+
+    <!-- tf -->
+    <node pkg="mcl" type="tf_broadcaster_node" name="tf_broadcaster_node" >
+        <param name="odom_topic_name" value="roomba/odometry" />
+        <param name="odom_frame_id" value="odom" />
+        <param name="base_link_frame_id" value="base_link" />
+        <param name="lidar_frame_id" value="scan" />
+        <param name="thetas_frame_id" value="theta_s" />
+        <param name="dynamixel_frame_id" value="dynamixel" />
+        <param name="realsense_frame_id" value="realsense" />
+        <rosparam command="load" file="$(find mcl)/config/tf/tf.yaml" />
+    </node>
+
+</launch>

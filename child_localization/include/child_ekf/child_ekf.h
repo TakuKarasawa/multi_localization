@@ -32,6 +32,10 @@ private:
 	tf2_ros::Buffer tf_buffer_;
 	tf2_ros::TransformListener tf_listener_;
 
+	std::string odom_topic_name_;
+	std::string obj_topic_name_;
+	
+
 	KalmanFilter* kamlan_filter;
 };
 

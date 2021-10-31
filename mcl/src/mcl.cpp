@@ -488,9 +488,9 @@ void MCL::process()
     while(ros::ok()){
         if(has_received_map_ && !scan_.ranges.empty()){
             if(x_cov_ < X_COV_TH_ || y_cov_ < Y_COV_TH_ || yaw_cov_ < YAW_COV_TH_){
-                x_cov_ = 0.3;
-                y_cov_ = 0.3;
-                yaw_cov_ = 0.3;
+                x_cov_ = 0.2;
+                y_cov_ = 0.2;
+                yaw_cov_ = 0.2;
                 spread_particles();
             }
             

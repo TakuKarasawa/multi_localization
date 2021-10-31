@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="map_file" default="$(find mcl)/mapdata/map.yaml" />
+
+    <!-- map server -->
+    <node pkg="map_server" type="map_server" name="global_map" args="$(arg map_file)" />
+
+   <!-- set_marker -->
+    <node pkg="parent_localization" type="set_marker" name="set_marker" />
+
+</launch>

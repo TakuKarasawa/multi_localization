@@ -43,3 +43,6 @@ add_executable(parent_mcl_node
 )
 
 target_link_libraries(parent_mcl_node ${catkin_LIBRARIES} ${PROJECT_NAME})
+
+add_executable(set_marker src/set_marker.cpp)
+target_link_libraries(set_marker ${catkin_LIBRARIES})

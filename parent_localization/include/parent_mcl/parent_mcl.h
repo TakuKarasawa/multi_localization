@@ -4,6 +4,9 @@
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
+#include <iostream>
+#include <fstream>
+
 #include "mcl/mcl.h"
 #include "object_detector_msgs/ObjectPosition.h"
 #include "object_detector_msgs/ObjectPositions.h"
@@ -24,6 +27,7 @@ private:
     std::string obj_topic_name_;
     std::string markers_topic_name_;
 
+    int count;
     double DISTANCE_OBJ_TH_;
 };
 
