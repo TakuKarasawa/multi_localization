@@ -1,9 +1,25 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="map_file" default="$(find mcl)/mapdata/map.yaml" />
-    <arg name="manager_name" default="nodelet_magager" />
+    <!-- topic name -->
+    <arg name="scan_topic_name" default="/scan"/>
+    <arg name="map_topic_name" default="/map"/>
+    <arg name="est_pose_topic_name" default="/est_pose"/>
+    <arg name="est_poses_topic_name" default="/est_poses"/>
+    <arg name="obj_topic_name" default="object_positions"/>
+    <arg name="markers_topic_name" default="/markers"/>
+    <arg name="odom_topic_name" default="roomba/odometry"/>
+
+    <!-- frame id -->
+    <arg name="map_frame_id" default="map"/>
+    <arg name="odom_frame_id" default="odom"/>
+    <arg name="base_link_frame_id" default="base_link"/>
+    <arg name="lidar_frame_id" default="scan"/>
+    <arg name="thetas_frame_id" default="theta_s"/>
+    <arg name="dynamixel_frame_id" default="dynamixel"/>
+    <arg name="realsense_frame_id" default="realsense"/>
 
     <!-- map server -->
+    <arg name="map_file" default="$(find mcl)/mapdata/map.yaml" />
     <node pkg="map_server" type="map_server" name="global_map" args="$(arg map_file)" />
 
     <!-- rviz -->
@@ -11,15 +27,15 @@
 
     <!-- parent_mcl -->
     <node pkg="parent_localization" type="parent_mcl_node" name="parent_mcl_node" output="screen" >
-        <param name="scan_topic_name" value="/scan" />
-        <param name="map_topic_name" value="/map" />
-        <param name="est_pose_topic_name" value="/est_pose" />
-        <param name="est_poses_topic_name" value="/est_poses" />
-        <param name="obj_topic_name" value="object_positions"/>
-        <param name="markers_topic_name" value="markers"/>
-        <param name="map_frame_id" value="map" />
-        <param name="odom_frame_id" value="odom" />
-        <param name="base_link_frame_id" value="base_link" />
+        <param name="scan_topic_name" value="$(arg scan_topic_name)" />
+        <param name="map_topic_name" value="$(arg map_topic_name)" />
+        <param name="est_pose_topic_name" value="$(arg est_pose_topic_name)" />
+        <param name="est_poses_topic_name" value="$(arg est_poses_topic_name)" />
+        <param name="obj_topic_name" value="$(arg obj_topic_name)"/>
+        <param name="markers_topic_name" value="$(arg markers_topic_name)"/>
+        <param name="map_frame_id" value="$(arg map_frame_id)" />
+        <param name="odom_frame_id" value="$(arg odom_frame_id)" />
+        <param name="base_link_frame_id" value="$(arg base_link_frame_id)" />
         <rosparam command="load" file="$(find parent_localization)/config/parent_mcl/parent_mcl.yaml" />
     </node>
 
@@ -33,13 +49,13 @@
 
     <!-- tf -->
     <node pkg="mcl" type="tf_broadcaster_node" name="tf_broadcaster_node" >
-        <param name="odom_topic_name" value="roomba/odometry" />
-        <param name="odom_frame_id" value="odom" />
-        <param name="base_link_frame_id" value="base_link" />
-        <param name="lidar_frame_id" value="scan" />
-        <param name="thetas_frame_id" value="theta_s" />
-        <param name="dynamixel_frame_id" value="dynamixel" />
-        <param name="realsense_frame_id" value="realsense" />
+        <param name="odom_topic_name" value="$(arg odom_topic_name)" />
+        <param name="odom_frame_id" value="$(arg odom_frame_id)" />
+        <param name="base_link_frame_id" value="$(arg base_link_frame_id)" />
+        <param name="lidar_frame_id" value="$(arg lidar_frame_id)" />
+        <param name="thetas_frame_id" value="$(arg thetas_frame_id)" />
+        <param name="dynamixel_frame_id" value="$(arg dynamixel_frame_id)" />
+        <param name="realsense_frame_id" value="$(arg realsense_frame_id)" />
         <rosparam command="load" file="$(find mcl)/config/tf/tf.yaml" />
     </node>
 

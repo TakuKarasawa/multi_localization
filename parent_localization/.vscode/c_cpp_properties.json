@@ -35,7 +35,8 @@
                 "/home/amsl/catkin_ws/src/velodyne/velodyne_pointcloud/include/**",
                 "/usr/include/**",
                 "/home/amsl/catkin_ws/src/multi_localization/mcl/include",
-                "/opt/ros/noetic/include"
+                "/opt/ros/noetic/include",
+                "/usr/local/include/eigen3"
             ],
             "name": "ROS"
         }

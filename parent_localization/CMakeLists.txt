@@ -36,13 +36,20 @@ include_directories(
 add_library(${PROJECT_NAME} ../mcl/src/mcl.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 
+# parent mcl
 add_executable(parent_mcl_node
     ../mcl/src/mcl.cpp
     src/parent_mcl_node.cpp
     src/parent_mcl.cpp
 )
-
 target_link_libraries(parent_mcl_node ${catkin_LIBRARIES} ${PROJECT_NAME})
 
+# reposition_marker
+add_executable(reposition_marker
+    src/reposition_marker.cpp
+)
+target_link_libraries(reposition_marker ${catkin_LIBRARIES})
+
+# set_marker
 add_executable(set_marker src/set_marker.cpp)
 target_link_libraries(set_marker ${catkin_LIBRARIES})

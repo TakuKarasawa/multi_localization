@@ -172,8 +172,8 @@ int main(int argc,char** argv)
         marker.pose.position.z = 0.0;
         marker.pose.orientation.x = 0.0;
         marker.pose.orientation.y = 0.0;
-        marker.pose.orientation.y = 0.0;
-        marker.pose.orientation.y = 1.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
 
         if(strvec.at(1) == "trash_can"){
             if(is_first_trash){

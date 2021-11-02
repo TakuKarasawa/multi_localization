@@ -1,0 +1,39 @@
+# trash_can
+trash_can_r: 0.0
+trash_can_g: 1.0
+trash_can_b: 0.0
+
+# fire_hydrant
+fire_hydrant_r: 0.0
+fire_hydrant_g: 0.0
+fire_hydrant_b: 1.0
+
+# bench
+bench_r: 1.0
+bench_g: 0.0
+bench_b: 0.0
+
+# big_bench
+big_bench_r: 1.0
+big_bench_g: 1.0
+big_bench_b: 0.0
+
+# fire_extinguisher
+fire_extinguisher_r: 0.0
+fire_extinguisher_g: 1.0
+fire_extinguisher_b: 1.0
+
+# kitchenette_icon
+kitchenette_icon_r: 1.0
+kitchenette_icon_g: 0.0
+kitchenette_icon_b: 1.0
+
+# toilet_icon
+toilet_icon_r: 0.0
+toilet_icon_g: 0.5
+toilet_icon_b: 0.0
+
+# chair
+chair_r: 1.0
+chair_g: 0.5
+chair_b: 0.5
