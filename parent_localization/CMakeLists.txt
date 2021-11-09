@@ -53,3 +53,7 @@ target_link_libraries(reposition_marker ${catkin_LIBRARIES})
 # set_marker
 add_executable(set_marker src/set_marker.cpp)
 target_link_libraries(set_marker ${catkin_LIBRARIES})
+
+# marker updater
+add_executable(marker_updater src/marker_updater.cpp)
+target_link_libraries(marker_updater ${catkin_LIBRARIES})

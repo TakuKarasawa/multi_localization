@@ -17,6 +17,42 @@ struct MarkerColor
     float b;
 };
 
+struct Object
+{
+    double x;
+    double y;
+};
+
+class Objects
+{
+public:
+    Objects(std::string name) :
+        name_(name) { }
+
+    ~Objects() { }
+
+    void push_object(Object object) { element_.push_back(object); }
+
+    std::string name_;
+    std::vector<Object> element_;
+};
+
+class Dateset
+{
+public:
+    Dateset()
+    {
+        
+    }
+    ~Dateset();
+
+
+
+    std::vector<Objects> list_;
+
+};
+
+
 class RepositionMarker
 {
 public:
@@ -37,6 +73,10 @@ private:
     std::string dir_path_ = "/home/amsl/catkin_ws/src/multi_localization/parent_localization/record/";
     std::string file_name_;
     std::string marker_frame_id_;
+    bool is_first_;
+    double first_time_;
+
+    Dateset dataset_;
 
     // marker color
     MarkerColor trash_can_;

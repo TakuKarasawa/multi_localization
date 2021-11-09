@@ -1,13 +1,13 @@
-#include "reposition_marker/reposition_marker.h"
+#include "marker_updater/marker_updater.h"
 
-RepositionMarker::RepositionMarker() :
-    private_nh_("~"),
-    count_(0), is_first_(true), first_time_(0.0)
+MarkerUpdater::MarkerUpdater() :
+	private_nh_("~"),
+	count_(0), is_first_(true), first_time_(0.0)
 {
-    private_nh_.param("file_name",file_name_,{"record_3.csv"});
-    private_nh_.param("marker_frame_id",marker_frame_id_,{"map"});
+	private_nh_.param("file_name",file_name_,{"record_3.csv"});
+	private_nh_.param("raw_marker_frame_id",raw_marker_frame_id_,{"map"});
 
-    // marker color
+	// marker color
     private_nh_.param("trash_can_r",trash_can_.r,{0.0});
     private_nh_.param("trash_can_g",trash_can_.g,{1.0});
     private_nh_.param("trash_can_b",trash_can_.b,{0.0});
@@ -33,14 +33,14 @@ RepositionMarker::RepositionMarker() :
     private_nh_.param("chair_g",chair_.g,{0.5});
     private_nh_.param("chair_b",chair_.b,{0.5});
 
-    markers_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("/markers",1);
+	raw_markers_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("/raw_markers",1);
 }
 
-RepositionMarker::~RepositionMarker() { }
+MarkerUpdater::~MarkerUpdater() { }
 
-std::vector<std::string> RepositionMarker::split(std::string& input,char delimiter)
+std::vector<std::string> MarkerUpdater::split(std::string& input,char delimiter)
 {
-    std::istringstream stream(input);
+	std::istringstream stream(input);
     std::string field;
     std::vector<std::string> result;
     while(std::getline(stream,field,delimiter)) result.push_back(field);
@@ -48,9 +48,9 @@ std::vector<std::string> RepositionMarker::split(std::string& input,char delimit
     return result;
 }
 
-void RepositionMarker::read_csv(visualization_msgs::MarkerArray& markers)
+void MarkerUpdater::read_csv(visualization_msgs::MarkerArray& markers)
 {
-    std::ifstream ifs_csv_file(dir_path_ + file_name_);
+	std::ifstream ifs_csv_file(dir_path_ + file_name_);
     std::string line;
     while(std::getline(ifs_csv_file,line)){
         std::vector<std::string> strvec = split(line,',');
@@ -61,7 +61,7 @@ void RepositionMarker::read_csv(visualization_msgs::MarkerArray& markers)
         }
 
         visualization_msgs::Marker marker;
-        marker.header.frame_id = marker_frame_id_;
+        marker.header.frame_id = raw_marker_frame_id_;
         marker.ns = strvec.at(1);
         marker.id = count_;
 
@@ -93,6 +93,7 @@ void RepositionMarker::read_csv(visualization_msgs::MarkerArray& markers)
             marker.color.g = trash_can_.g;
             marker.color.b = trash_can_.b;
             marker.color.a = 1.0f;
+			
         }
         else if(strvec.at(1) == "fire_hydrant"){
             marker.color.r = fire_hydrant_.r;
@@ -147,14 +148,13 @@ void RepositionMarker::read_csv(visualization_msgs::MarkerArray& markers)
     }
 }
 
-
-void RepositionMarker::process()
+void MarkerUpdater::process()
 {
-    visualization_msgs::MarkerArray markers;
+	visualization_msgs::MarkerArray markers;
     read_csv(markers);
     ros::Rate rate(1);
     while(ros::ok()){
-        markers_pub_.publish(markers);
+        raw_markers_pub_.publish(markers);
         ros::spinOnce();
         rate.sleep();
     }
@@ -162,8 +162,8 @@ void RepositionMarker::process()
 
 int main(int argc,char** argv)
 {
-    ros::init(argc,argv,"reposition_marker");
-    RepositionMarker reposition_marker;
-    reposition_marker.process();
-    return 0;
+	ros::init(argc,argv,"marker_updater");
+	MarkerUpdater marker_updater;
+	marker_updater.process();
+	return 0;
 }

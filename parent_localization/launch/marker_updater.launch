@@ -4,14 +4,14 @@
     <arg name="map_file" default="$(find mcl)/mapdata/map.yaml" />
     <node pkg="map_server" type="map_server" name="global_map" args="$(arg map_file)" />
 
-    <!-- reposition marker -->
-    <node pkg="parent_localization" type="reposition_marker" name="reposition_marker" output="screen" >
+    <!-- marker updater -->
+    <node pkg="parent_localization" type="marker_updater" name="marker_updater" output="screen" >
         <param name="file_name" value="record_3.csv" />
         <param name="marker_frame_id" value="map"/>
         <rosparam command="load" file="$(find parent_localization)/config/parent_mcl/marker_color.yaml"/>
     </node>
 
     <!-- rviz -->
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find parent_localization)/config/rviz/set_marker_on_the_map.rviz" />
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find parent_localization)/config/rviz/marker_updater.rviz" />
 
 </launch>
