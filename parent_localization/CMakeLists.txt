@@ -57,3 +57,7 @@ target_link_libraries(set_marker ${catkin_LIBRARIES})
 # marker updater
 add_executable(marker_updater src/marker_updater.cpp)
 target_link_libraries(marker_updater ${catkin_LIBRARIES})
+
+# get object name
+add_executable(get_object_name src/get_object_name.cpp)
+target_link_libraries(get_object_name ${catkin_LIBRARIES})

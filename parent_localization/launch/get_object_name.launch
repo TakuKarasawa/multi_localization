@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+
+	<node pkg="parent_localization" type="get_object_name" name="get_object_name" output="screen" >
+		<rosparam command="load" file="$(find parent_localization)/config/parent_mcl/object_list.yaml" />
+	</node>
+
+</launch>

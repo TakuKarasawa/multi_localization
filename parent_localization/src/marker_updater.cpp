@@ -7,33 +7,9 @@ MarkerUpdater::MarkerUpdater() :
 	private_nh_.param("file_name",file_name_,{"record_3.csv"});
 	private_nh_.param("raw_marker_frame_id",raw_marker_frame_id_,{"map"});
 
-	// marker color
-    private_nh_.param("trash_can_r",trash_can_.r,{0.0});
-    private_nh_.param("trash_can_g",trash_can_.g,{1.0});
-    private_nh_.param("trash_can_b",trash_can_.b,{0.0});
-    private_nh_.param("fire_hydrant_r",fire_hydrant_.r,{0.0});
-    private_nh_.param("fire_hydrant_g",fire_hydrant_.g,{0.0});
-    private_nh_.param("fire_hydrant_b",fire_hydrant_.b,{1.0});
-    private_nh_.param("bench_r",bench_.r,{1.0});
-    private_nh_.param("bench_g",bench_.g,{0.0});
-    private_nh_.param("bench_b",bench_.b,{0.0});
-    private_nh_.param("big_bench_r",big_bench_.r,{1.0});
-    private_nh_.param("big_bench_g",big_bench_.g,{1.0});
-    private_nh_.param("big_bench_b",big_bench_.b,{0.0});
-    private_nh_.param("fire_extinguisher_r",fire_extinguisher_.r,{0.0});
-    private_nh_.param("fire_extinguisher_g",fire_extinguisher_.g,{1.0});
-    private_nh_.param("fire_extinguisher_b",fire_extinguisher_.b,{1.0});
-    private_nh_.param("kitchenette_icon_r",kitchenette_icon_.r,{1.0});
-    private_nh_.param("kitchenette_icon_g",kitchenette_icon_.g,{0.0});
-    private_nh_.param("kitchenette_icon_b",kitchenette_icon_.b,{1.0});
-    private_nh_.param("toilet_icon_r",toilet_icon_.r,{0.0});
-    private_nh_.param("toilet_icon_g",toilet_icon_.g,{0.0});
-    private_nh_.param("toilet_icon_b",toilet_icon_.b,{0.0});
-    private_nh_.param("chair_r",chair_.r,{1.0});
-    private_nh_.param("chair_g",chair_.g,{0.5});
-    private_nh_.param("chair_b",chair_.b,{0.5});
-
 	raw_markers_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("/raw_markers",1);
+
+    load_parameter();
 }
 
 MarkerUpdater::~MarkerUpdater() { }
@@ -46,6 +22,30 @@ std::vector<std::string> MarkerUpdater::split(std::string& input,char delimiter)
     while(std::getline(stream,field,delimiter)) result.push_back(field);
     
     return result;
+}
+
+void MarkerUpdater::load_parameter()
+{
+    if(!private_nh_.getParam("object_list",object_list_)){
+        ROS_WARN("Could not load objects list");
+        return;
+    }
+    ROS_ASSERT(object_list_.getType() == XmlRpc::XmlRpcValue::TypeArray);
+    std::cout << "object_list size: " << (int)object_list_.size() << std::endl;
+    for(int i = 0; i < (int)object_list_.size(); i++){
+        if(!object_list_[i]["name"].valid() || !object_list_[i]["id"].valid() || !object_list_[i]["r"].valid() || !object_list_[i]["g"].valid() || !object_list_[i]["b"].valid()){
+            ROS_WARN("object_list is valid");
+            return;
+        }
+        if(object_list_[i]["name"].getType() == XmlRpc::XmlRpcValue::TypeString && object_list_[i]["r"].getType() == XmlRpc::XmlRpcValue::TypeDouble && object_list_[i]["g"].getType() == XmlRpc::XmlRpcValue::TypeDouble && object_list_[i]["b"].getType() == XmlRpc::XmlRpcValue::TypeDouble){
+            std::string name = static_cast<std::string>(object_list_[i]["name"]);
+            double r = static_cast<double>(object_list_[i]["r"]);
+            double g = static_cast<double>(object_list_[i]["g"]);
+            double b = static_cast<double>(object_list_[i]["b"]);
+            ObjectNode object_node(name,(float)r,(float)g,(float)b);
+            objects_.push_back(object_node);
+        }
+    }
 }
 
 void MarkerUpdater::read_csv(visualization_msgs::MarkerArray& markers)
@@ -81,68 +81,25 @@ void MarkerUpdater::read_csv(visualization_msgs::MarkerArray& markers)
         marker.pose.orientation.z = 0.0;
         marker.pose.orientation.w = 1.0;
 
-        /*
-        std::cout << strvec.at(1) << std::endl;
-        std::cout << "Time: " << std::stod(strvec.at(0)) - first_time_ << std::endl;
-        std::cout << "(x,y): " << "(" << std::stod(strvec.at(2)) << "," << std::stod(strvec.at(3)) << ")" << std::endl;
-        std::cout << std::endl;
-        */
+        bool is_color = false;
+        for(const auto&object : objects_){
+            if(strvec.at(1) == object.name){
+                marker.color.r = object.r;
+                marker.color.g = object.g;
+                marker.color.b = object.b;
+                marker.color.a = 1.0f;
+                is_color = true;
+            }
+            if(is_color) break;
+        }
 
-        if(strvec.at(1) == "trash_can"){
-            marker.color.r = trash_can_.r;
-            marker.color.g = trash_can_.g;
-            marker.color.b = trash_can_.b;
-            marker.color.a = 1.0f;
-			
-        }
-        else if(strvec.at(1) == "fire_hydrant"){
-            marker.color.r = fire_hydrant_.r;
-            marker.color.g = fire_hydrant_.g;
-            marker.color.b = fire_hydrant_.b;
-            marker.color.a = 1.0f;
-        }
-        else if(strvec.at(1) == "bench"){
-            marker.color.r = bench_.r;
-            marker.color.g = bench_.g;
-            marker.color.b = bench_.b;
-            marker.color.a = 1.0f;
-        }
-        else if(strvec.at(1) == "big_bench"){
-            marker.color.r = big_bench_.r;
-            marker.color.g = big_bench_.g;
-            marker.color.b = big_bench_.b;
-            marker.color.a = 1.0f;
-        }
-        else if(strvec.at(1) == "fire_extinguisher"){
-            marker.color.r = fire_extinguisher_.r;
-            marker.color.g = fire_extinguisher_.g;
-            marker.color.b = fire_extinguisher_.b;
-            marker.color.a = 1.0f;
-        }
-        else if(strvec.at(1) == "kitchenette_icon"){
-            marker.color.r = kitchenette_icon_.r;
-            marker.color.g = kitchenette_icon_.g;
-            marker.color.b = kitchenette_icon_.b;
-            marker.color.a = 1.0f;
-        }
-        else if(strvec.at(1) == "toilet_icon"){
-            marker.color.r = toilet_icon_.r;
-            marker.color.g = toilet_icon_.g;
-            marker.color.b = toilet_icon_.b;
-            marker.color.a = 1.0f;
-        }
-        else if(strvec.at(1) == "chair"){
-            marker.color.r = chair_.r;
-            marker.color.g = chair_.g;
-            marker.color.b = chair_.b;
-            marker.color.a = 1.0f;
-        }
-        else{
+        if(!is_color){
             marker.color.r = 1.0f;
             marker.color.g = 1.0f;
             marker.color.b = 1.0f;
             marker.color.a = 1.0f;
         }
+        
         markers.markers.push_back(marker);
         count_ ++;
     }

@@ -8,7 +8,7 @@
     <node pkg="parent_localization" type="marker_updater" name="marker_updater" output="screen" >
         <param name="file_name" value="record_3.csv" />
         <param name="marker_frame_id" value="map"/>
-        <rosparam command="load" file="$(find parent_localization)/config/parent_mcl/marker_color.yaml"/>
+        <rosparam command="load" file="$(find parent_localization)/config/parent_mcl/object_list.yaml"/>
     </node>
 
     <!-- rviz -->

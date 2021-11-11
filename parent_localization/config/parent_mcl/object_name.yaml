@@ -1,0 +1,18 @@
+# object name
+object_list:
+    - name: trash_can
+      id: 1
+    - name: fire_hydrant
+      id: 2
+    - name: bench
+      id: 3
+    - name: big_bench
+      id: 4
+    - name: fire_extinguisher
+      id: 5
+    - name: kitchenette_icon
+      id: 6
+    - name: toilet_icon
+      id: 7
+    - name: chair
+      id: 8

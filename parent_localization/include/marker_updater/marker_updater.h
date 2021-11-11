@@ -9,11 +9,15 @@
 #include <sstream>
 #include <fstream>
 
-struct MarkerColor
+struct ObjectNode
 {
-    float r;
-    float g;
-    float b;
+	ObjectNode(std::string name_,float r_,float g_,float b_) :
+	name(name_), r(r_), g(g_), b(b_) {}
+
+	std::string name;
+	float r;
+	float g;
+	float b;
 };
 
 class MarkerUpdater
@@ -24,6 +28,7 @@ public:
 	void process();
 
 private:
+	void load_parameter();
 	void read_csv(visualization_msgs::MarkerArray& markers);
     std::vector<std::string> split(std::string& input,char delimiter);
 
@@ -39,15 +44,8 @@ private:
     std::string file_name_;
 	std::string raw_marker_frame_id_;
 	
-	// marker color
-    MarkerColor trash_can_;
-    MarkerColor fire_hydrant_;
-    MarkerColor bench_;
-    MarkerColor big_bench_;
-    MarkerColor fire_extinguisher_;
-    MarkerColor kitchenette_icon_; 
-    MarkerColor toilet_icon_;
-    MarkerColor chair_; 
+	XmlRpc::XmlRpcValue object_list_;
+    std::vector<ObjectNode> objects_;
 };
 
 #endif	// MARKER_UPDATER_H_

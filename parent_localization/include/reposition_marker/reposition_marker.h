@@ -10,11 +10,15 @@
 #include <sstream>
 #include <fstream>
 
-struct MarkerColor
+struct ObjectNode
 {
-    float r;
-    float g;
-    float b;
+	ObjectNode(std::string name_,float r_,float g_,float b_) :
+	name(name_), r(r_), g(g_), b(b_) {}
+
+	std::string name;
+	float r;
+	float g;
+	float b;
 };
 
 struct Object
@@ -32,7 +36,12 @@ public:
     ~Objects() { }
 
     void push_object(Object object) { element_.push_back(object); }
+    
+    std::string reference_object_name(){
+        return name_;
+    }
 
+private:
     std::string name_;
     std::vector<Object> element_;
 };
@@ -44,9 +53,18 @@ public:
     {
         
     }
-    ~Dateset();
+    ~Dateset() {}
 
+    void push_objects(Objects objects) { list_.push_back(objects); }
 
+    void push_object(std::string object_name,Object object)
+    {
+        for(auto &obj : list_){
+            if(obj.reference_object_name() == object_name){
+                obj.push_object(object);
+            }
+        }
+    }
 
     std::vector<Objects> list_;
 
@@ -61,7 +79,9 @@ public:
     void process();
 
 private:
+    void load_parameter();
     void read_csv(visualization_msgs::MarkerArray& markers);
+    void make_firsts();
     std::vector<std::string> split(std::string& input,char delimiter);
 
     ros::NodeHandle nh_;
@@ -76,17 +96,13 @@ private:
     bool is_first_;
     double first_time_;
 
+    int object_num_;
+    std::vector<bool> is_firsts_;
+
     Dateset dataset_;
 
-    // marker color
-    MarkerColor trash_can_;
-    MarkerColor fire_hydrant_;
-    MarkerColor bench_;
-    MarkerColor big_bench_;
-    MarkerColor fire_extinguisher_;
-    MarkerColor kitchenette_icon_; 
-    MarkerColor toilet_icon_;
-    MarkerColor chair_; 
+    XmlRpc::XmlRpcValue object_list_;
+    std::vector<ObjectNode> objects_;
 };
 
 #endif  // REPOSITION_MARKER_H_
