@@ -2,16 +2,15 @@
 
 RepositionMarker::RepositionMarker() :
     private_nh_("~"),
-    count_(0), is_first_(true), first_time_(0.0),
-    object_num_(8)
+    count_(0), is_first_(true), first_time_(0.0)
 {
     private_nh_.param("file_name",file_name_,{"record_3.csv"});
     private_nh_.param("marker_frame_id",marker_frame_id_,{"map"});
 
     markers_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("/markers",1);
 
-    make_firsts();
     load_parameter();
+    make_firsts();
 }
 
 RepositionMarker::~RepositionMarker() { }
@@ -23,7 +22,6 @@ void RepositionMarker::load_parameter()
         return;
     }
     ROS_ASSERT(object_list_.getType() == XmlRpc::XmlRpcValue::TypeArray);
-    std::cout << "object_list size: " << (int)object_list_.size() << std::endl;
     for(int i = 0; i < (int)object_list_.size(); i++){
         if(!object_list_[i]["name"].valid() || !object_list_[i]["id"].valid() || !object_list_[i]["r"].valid() || !object_list_[i]["g"].valid() || !object_list_[i]["b"].valid()){
             ROS_WARN("object_list is valid");
@@ -42,7 +40,7 @@ void RepositionMarker::load_parameter()
 
 void RepositionMarker::make_firsts()
 {
-    for(int i = 0; i < object_num_; i++) is_firsts_[i] = true;
+    for(int i = 0; i < (int)object_list_.size(); i++) is_firsts_.push_back(true);
 }
 
 std::vector<std::string> RepositionMarker::split(std::string& input,char delimiter)

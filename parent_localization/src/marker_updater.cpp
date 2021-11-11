@@ -31,7 +31,6 @@ void MarkerUpdater::load_parameter()
         return;
     }
     ROS_ASSERT(object_list_.getType() == XmlRpc::XmlRpcValue::TypeArray);
-    std::cout << "object_list size: " << (int)object_list_.size() << std::endl;
     for(int i = 0; i < (int)object_list_.size(); i++){
         if(!object_list_[i]["name"].valid() || !object_list_[i]["id"].valid() || !object_list_[i]["r"].valid() || !object_list_[i]["g"].valid() || !object_list_[i]["b"].valid()){
             ROS_WARN("object_list is valid");

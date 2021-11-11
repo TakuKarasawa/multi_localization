@@ -70,7 +70,6 @@ public:
 
 };
 
-
 class RepositionMarker
 {
 public:
@@ -89,14 +88,13 @@ private:
     ros::Publisher markers_pub_;
 
     int count_;
+    bool is_first_;
+    double first_time_;
 
     std::string dir_path_ = "/home/amsl/catkin_ws/src/multi_localization/parent_localization/record/";
     std::string file_name_;
     std::string marker_frame_id_;
-    bool is_first_;
-    double first_time_;
 
-    int object_num_;
     std::vector<bool> is_firsts_;
 
     Dateset dataset_;
