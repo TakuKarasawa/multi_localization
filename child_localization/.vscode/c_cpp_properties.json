@@ -32,7 +32,8 @@
                 "/usr/include/**",
                 "/opt/ros/noetic/include",
                 "/home/amsl/catkin_ws/src/ndt_localizer/include",
-                "${workspaceFolder}/include"
+                "${workspaceFolder}/include",
+                "/usr/local/include/eigen3"
             ],
             "name": "ROS"
         }

@@ -33,8 +33,9 @@ include_directories(
     ${Eigen3_INCLUDE_DIRS}
 )
 
-add_executable(child_ekf src/child_ekf.cpp)
-
-add_dependencies(child_ekf ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-target_link_libraries(child_ekf ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Eigen3_LIBRARIES})
+# child ekf
+add_executable(child_ekf_node
+    src/child_ekf.cpp
+    src/child_ekf_node.cpp
+)
+target_link_libraries(child_ekf_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Eigen3_LIBRARIES})

@@ -1,17 +1,22 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="is_rviz" default="false" />
+
     <!-- map server -->
     <arg name="map_file" default="$(find mcl)/mapdata/map.yaml" />
     <node pkg="map_server" type="map_server" name="global_map" args="$(arg map_file)" />
 
     <!-- reposition marker -->
     <node pkg="parent_localization" type="reposition_marker" name="reposition_marker" output="screen" >
-        <param name="file_name" value="record_3.csv" />
+        <param name="file_name" value="arrange_3.csv" />
         <param name="marker_frame_id" value="map"/>
-        <rosparam command="load" file="$(find parent_localization)/config/parent_mcl/object_list.yaml"/>
+        <param name="marker_frame_id" value="map"/>
+        <param name="is_debug" value="false" />
     </node>
 
     <!-- rviz -->
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find parent_localization)/config/rviz/set_marker_on_the_map.rviz" />
+    <group if="$(arg is_rviz)" >
+        <node pkg="rviz" type="rviz" name="rviz" args="-d $(find parent_localization)/config/rviz/set_marker_on_the_map.rviz" />
+    </group>
 
 </launch>
