@@ -11,23 +11,25 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   tf2_ros
   visualization_msgs
+  object_detector_msgs
 )
 
 find_package(PCL REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 catkin_package(
     INCLUDE_DIRS include
     ${PCL_INCLUDE_DIR}
+    ${Eigen3_INCLUDE_DIRS}
 )
 
 include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIR}
+    ${Eigen3_INCLUDE_DIRS}
 )
 
-add_executable(map_updater src/map_updater.cpp)
-
-add_dependencies(map_updater ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-target_link_libraries(map_updater ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+# map update checker
+add_executable(map_update_checker src/map_update_checker.cpp)
+target_link_libraries(map_update_checker ${catkin_LIBRARIES})

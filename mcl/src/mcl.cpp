@@ -294,7 +294,7 @@ void MCL::resampling()
             new_particles.push_back(p);
         }
     }
-    sort(new_particles.begin(),new_particles.end(),[](const Particle& a,const Particle& b) { return a.likelihood_ > b.likelihood_; });
+    std::sort(new_particles.begin(),new_particles.end(),[](const Particle& a,const Particle& b) { return a.likelihood_ > b.likelihood_; });
     particles_ = new_particles;
 }
 

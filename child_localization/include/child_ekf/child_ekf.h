@@ -27,20 +27,60 @@ private:
 	void object_positions_callback(const object_detector_msgs::ObjectPositionsConstPtr& msg);
 	void timer_callback(const ros::TimerEvent& event);
 
+	void initialize(double x,double y,double yaw);
+	void set_pose(double x,double y,double yaw);
+	void publish_pose();
+	void publish_tf();
 
+	void motion_update(double dt);
+	void measurement_update();
+
+	geometry_msgs::Quaternion rpy_to_msg(double roll,double pitch,double yaw);
 
 	ros::NodeHandle nh_;
 	ros::NodeHandle private_nh_;
 	ros::Timer timer_;
-	ros::Publisher odom_sub_;
+	ros::Subscriber odom_sub_;
 	ros::Subscriber obj_sub_;
-	
+	ros::Publisher pose_pub_;	
+
+
 	std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
 	std::shared_ptr<tf2_ros::Buffer> buffer_;
 	std::shared_ptr<tf2_ros::TransformListener> listener_;
 
+	nav_msgs::Odometry odom_;
+	object_detector_msgs::ObjectPositions objects_;
+	ros::Time now_time_;
+	ros::Time last_time_;
+
+	bool is_odom_tf_;
+	bool is_first_;
+	bool has_received_odom_;
+	bool has_received_obj_;
+
 	std::string odom_topic_name_;
 	std::string obj_topic_name_;
+	std::string pose_topic_name_;
+	std::string map_frame_id_;
+	std::string odom_frame_id_;
+	std::string base_link_frame_id_;
+
+
+	Eigen::Vector3d MU_;
+	Eigen::Matrix3d SIGMA_;
+
+	double HZ_;
+	double INIT_X_;
+	double INIT_Y_;
+	double INIT_YAW_;
+	double MOTION_NOISE_NN_;
+	double MOTION_NOISE_NO_;
+	double MOTION_NOISE_ON_;
+	double MOTION_NOISE_OO_;
+	double DISTANCE_NOISE_RATE_;
+	double DIRECTION_NOISE_;
+
 };
 
 #endif	// CHILD_EKF_H_

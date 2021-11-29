@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- map server -->
+    <arg name="map_file" default="$(find mcl)/mapdata/map.yaml" />
+    <node pkg="map_server" type="map_server" name="global_map" args="$(arg map_file)" />
+
+    <!-- marker update checker -->
+	<node pkg="map_updater" type="map_update_checker" name="map_update_checker" output="screen" >
+        <param name="file_name" value="arrange_1.csv" />
+        <param name="marker_frame_id" value="map"/>
+        <rosparam command="load" file="$(find map_updater)/config/object/object_list.yaml"/>
+    </node>
+
+    <!-- rviz -->
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find map_updater)/config/rviz/set_marker.rviz" />
+
+</launch>
