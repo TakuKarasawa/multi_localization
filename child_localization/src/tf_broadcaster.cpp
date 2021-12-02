@@ -2,7 +2,7 @@
 
 TFBroadcaster::TFBroadcaster() : private_nh_("~")
 {
-	private_nh_.param("is_odom_tf",is_odom_tf_,{false});
+	private_nh_.param("is_odom_tf",is_odom_tf_,{true});
 	private_nh_.param("odom_topic_name",odom_topic_name_,{"roomba/odometry"});
 	private_nh_.param("odom_frame_id",odom_frame_id_,{"odom"});
 	private_nh_.param("base_link_frame_id",base_link_frame_id_,{"base_link"});
@@ -82,6 +82,6 @@ geometry_msgs::TransformStamped TFBroadcaster::create_transform_stamped_msg(std:
 
 void TFBroadcaster::process()
 { 
-	static_broadcaster_->sendTransform({ lidar_transform_stamped_, thetas_transform_stamped_, realsense_transform_stamped_ });
+	//static_broadcaster_->sendTransform({ lidar_transform_stamped_, thetas_transform_stamped_, realsense_transform_stamped_ });
 	ros::spin(); 
 }

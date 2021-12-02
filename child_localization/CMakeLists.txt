@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(child_localization)
 
+add_compile_options(-std=c++11 -O2 -g -Wall)
+
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
@@ -39,3 +41,24 @@ add_executable(child_ekf_node
     src/child_ekf_node.cpp
 )
 target_link_libraries(child_ekf_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Eigen3_LIBRARIES})
+
+# child mcl
+add_executable(child_mcl_node
+    src/child_mcl.cpp
+    src/child_mcl_node.cpp
+)
+target_link_libraries(child_mcl_node ${catkin_LIBRARIES})
+
+# tf
+add_executable(tf_broadcaster_node
+    src/tf_broadcaster.cpp
+    src/tf_broadcaster_node.cpp
+)
+target_link_libraries(tf_broadcaster_node ${catkin_LIBRARIES})
+
+# mcl
+add_executable(mcl_node
+    src/mcl.cpp
+    src/mcl_node.cpp
+)
+target_link_libraries(mcl_node ${catkin_LIBRARIES} ${Eigen3_LIBRARIES})

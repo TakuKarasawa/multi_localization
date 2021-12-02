@@ -23,6 +23,7 @@ struct ObjectError
 	double error;
 };
 
+
 struct ObjectDistance
 {
 	ObjectDistance(std::string name_,double distance_) :

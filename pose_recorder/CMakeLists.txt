@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(pose_recorder)
 
+add_compile_options(-std=c++11 -O2 -g -Wall)
+
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
@@ -25,3 +27,7 @@ include_directories(
     include
     ${catkin_INCLUDE_DIRS}
 )
+
+# pose_recorder
+add_executable(pose_recorder_node src/pose_recorder.cpp)
+target_link_libraries(pose_recorder_node ${catkin_LIBRARIES})

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(mcl)
 
+add_compile_options(-std=c++11 -O2 -g -Wall)
+
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs

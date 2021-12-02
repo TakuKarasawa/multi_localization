@@ -1,15 +1,18 @@
-#include "mcl/mcl.h"
+#include "child_mcl/mcl.h"
 
 MCL::MCL() : 
     private_nh_("~"),
     engine_(seed_()),
-    has_received_map_(false), is_update_(false),
+    has_received_map_(false), is_update_(false), has_received_obj_(false),
     x_cov_(0.5), y_cov_(0.5), yaw_cov_(0.5),
     likelihood_fast_(0.0), likelihood_slow_(0.0),
     likelihood_average_(0.0), likelihood_sum_(0.0), likelihood_max_(0.0),
-    distance_sum_(0.0), angle_sum_(0.0), max_index_(0) 
+    distance_sum_(0.0), angle_sum_(0.0), 
+    max_index_(0), count_(0) 
 {
-    private_nh_.param("scan_topic_name",scan_topic_name_,{"/scan"});
+    private_nh_.param("file_name",file_name_,{"arrange_1.csv"});
+    private_nh_.param("obj_poses_topic_name",obj_poses_topic_name_,{"/object_positions"});
+
     private_nh_.param("map_topic_name",map_topic_name_,{"/map"});
     private_nh_.param("est_pose_topic_name",est_pose_topic_name_,{"est_pose"});
     private_nh_.param("est_poses_topic_name",est_poses_topic_name_,{"est_poses"});
@@ -45,8 +48,11 @@ MCL::MCL() :
     private_nh_.param("ANGLE_TH",ANGLE_TH_,{0.15});
     private_nh_.param("SELECTION_RATE",SELECTION_RATE_,{0.2});
 
+    private_nh_.param("DISTANCE_DEV_RATE",DISTANCE_DEV_RATE_,{0.01});
+    private_nh_.param("DIRECTION_DEV",DIRECTION_DEV_,{0.001});
+
+    obj_poses_sub_ = nh_.subscribe(obj_poses_topic_name_,1,&MCL::obj_poses_callback,this);
     map_sub_ = nh_.subscribe(map_topic_name_,1,&MCL::map_callback,this);
-    scan_sub_ = nh_.subscribe(scan_topic_name_,1,&MCL::scan_callback,this);
     timer_ = nh_.createTimer(ros::Duration(1),&MCL::timer_callback,this);
 
     est_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(est_pose_topic_name_,1);
@@ -135,22 +141,147 @@ void MCL::Particle::move(double dx,double dy,double dyaw)
 
 void MCL::Particle::measurement_update()
 {
-    double angle;
-    double map_range;
-    double range_diff = 0.0;
-    double p_w = 0.0;
+    std::vector<ObjectDistance> distances;
+    for(auto&o : m_->obj_poses_.object_position){
+        if(o.Class == "roomba") continue;
+        if(o.Class == "elevator") continue;
+        if(o.Class == "table") continue;
 
-    for(int i = 0; i < (int)(m_->scan_.ranges.size()); i += m_->RANGE_STEP_){
-        angle = m_->scan_.angle_min + i*m_->scan_.angle_increment;
-        map_range = m_->calc_range(pose_.pose.position.x,pose_.pose.position.y,m_->calc_yaw_from_quat(pose_.pose.orientation)+ angle);
-        range_diff = m_->scan_.ranges[i] - map_range;
+        double distance = std::sqrt(o.x*o.x + o.z*o.z);
+        double theta = std::atan2(o.z,o.x) - 0.5*M_PI;
+        //double theta = std::atan2(o.z,o.x);
+        ObjectDistance object_distance(o.Class,distance,theta);
+        distances.push_back(object_distance);
+    }
 
-        if(m_->scan_.ranges[i] < m_->MAX_RANGE_) p_w += m_->Z_HIT_ * std::exp(-range_diff*range_diff)/(2*m_->HIT_COV_*m_->HIT_COV_);
-        if(range_diff < 0) p_w += m_->Z_SHORT_ * m_->LAMBDA_SHORT_ * std::exp(-m_->LAMBDA_SHORT_*m_->scan_.ranges[i]);
-        if(m_->scan_.ranges[i] >= m_->MAX_RANGE_) p_w += m_->Z_MAX_;
-        if(m_->scan_.ranges[i] < m_->MAX_RANGE_) p_w += m_->Z_RAND_/m_->MAX_RANGE_;
+    if(distances.size() == 0) return;
+
+    for(auto&d : distances){
+        for(auto&m : m_->markers_.markers){
+            if(d.name == m.ns){
+                double distance = std::sqrt(std::pow(m.pose.position.x - pose_.pose.position.x,2) + std::pow(m.pose.position.y - pose_.pose.position.y,2));
+                //double theta = std::atan2(m.pose.position.y - pose_.pose.position.y,m.pose.position.x - pose_.pose.position.x) - 0.5*M_PI;
+                //double error = std::sqrt(std::pow(distance - d.distance,2)) + std::sqrt(std::pow(theta - d.theta,2));
+                double error = std::sqrt(std::pow(distance - d.distance,2)); 
+                ObjectError object_error(m.id,error);
+                d.push_object_error(object_error);
+            }
         }
-        likelihood_ = p_w;
+        d.sort_object_error();
+    }
+
+    for(auto&d : distances){
+        for(auto&m : m_->markers_.markers){
+            if(d.obejct_errors[0].id == m.id  && d.obejct_errors[0].error < 3){
+                double distance = std::sqrt(std::pow(m.pose.position.x - pose_.pose.position.x,2) + std::pow(m.pose.position.y - pose_.pose.position.y,2));
+                double direction = m_->calc_yaw_from_quat(pose_.pose.orientation) - std::atan2(m.pose.position.y - pose_.pose.position.y,m.pose.position.x - pose_.pose.position.x);
+                Eigen::Vector2d mean;
+                mean(0) = distance;
+                mean(1) = direction;
+                Eigen::MatrixX2d cov;
+                cov.setZero();
+                cov(0,0) = std::pow(distance*m_->DISTANCE_DEV_RATE_,2);
+                cov(1,1) = std::pow(m_->DIRECTION_DEV_,2);
+                MultivariateNormal multivariate_normal(mean,cov);
+                Eigen::Vector2d x;
+                x(0) = d.distance;
+                x(1) = d.theta;
+                likelihood_ += multivariate_normal.pdf(x);
+            }
+        }
+    }
+}
+
+std::vector<std::string> MCL::split(std::string& input,char delimiter)
+{
+	std::istringstream stream(input);
+    std::string field;
+    std::vector<std::string> result;
+    while(std::getline(stream,field,delimiter)) result.push_back(field);
+    
+    return result;
+}
+
+void MCL::load_parameter()
+{
+    if(!private_nh_.getParam("object_list",object_list_)){
+        ROS_WARN("Could not load objects list");
+        return;
+    }
+    ROS_ASSERT(object_list_.getType() == XmlRpc::XmlRpcValue::TypeArray);
+    for(int i = 0; i < (int)object_list_.size(); i++){
+        if(!object_list_[i]["name"].valid() || !object_list_[i]["id"].valid() || !object_list_[i]["r"].valid() || !object_list_[i]["g"].valid() || !object_list_[i]["b"].valid()){
+            ROS_WARN("object_list is valid");
+            return;
+        }
+        if(object_list_[i]["name"].getType() == XmlRpc::XmlRpcValue::TypeString && object_list_[i]["r"].getType() == XmlRpc::XmlRpcValue::TypeDouble && object_list_[i]["g"].getType() == XmlRpc::XmlRpcValue::TypeDouble && object_list_[i]["b"].getType() == XmlRpc::XmlRpcValue::TypeDouble){
+            std::string name = static_cast<std::string>(object_list_[i]["name"]);
+            double r = static_cast<double>(object_list_[i]["r"]);
+            double g = static_cast<double>(object_list_[i]["g"]);
+            double b = static_cast<double>(object_list_[i]["b"]);
+            ObjectNode object_node(name,(float)r,(float)g,(float)b);
+            objects_.push_back(object_node);
+        }
+    }
+}
+
+void MCL::read_csv()
+{
+    markers_.markers.clear();
+	std::ifstream ifs_csv_file(dir_path_ + file_name_);
+    std::string line;
+    while(std::getline(ifs_csv_file,line)){
+        std::vector<std::string> strvec = split(line,',');
+
+        visualization_msgs::Marker marker;
+        marker.header.frame_id = map_frame_id_;
+        marker.ns = strvec.at(1);
+        marker.id = count_;
+
+        marker.type = visualization_msgs::Marker::CUBE;
+        marker.action = visualization_msgs::Marker::ADD;
+        marker.lifetime = ros::Duration();
+
+        marker.scale.x = 0.4;
+        marker.scale.y = 0.4;
+        marker.scale.z = 0.6;
+
+        marker.pose.position.x = std::stod(strvec.at(2));
+        marker.pose.position.y = std::stod(strvec.at(3));
+        marker.pose.position.z = 0.0;
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
+
+        bool is_color = false;
+        for(const auto&object : objects_){
+            if(strvec.at(1) == object.name){
+                marker.color.r = object.r;
+                marker.color.g = object.g;
+                marker.color.b = object.b;
+                marker.color.a = 0.5f;
+                is_color = true;
+            }
+            if(is_color) break;
+        }
+
+        if(!is_color){
+            marker.color.r = 1.0f;
+            marker.color.g = 1.0f;
+            marker.color.b = 1.0f;
+            marker.color.a = 1.0f;
+        }
+        
+        markers_.markers.push_back(marker);
+        count_ ++;
+    }
+}
+
+void MCL::obj_poses_callback(const object_detector_msgs::ObjectPositionsConstPtr& msg)
+{
+    obj_poses_ = *msg;
+    has_received_obj_ = true;
 }
 
 void MCL::map_callback(const nav_msgs::OccupancyGridConstPtr& msg)
@@ -169,8 +300,6 @@ void MCL::map_callback(const nav_msgs::OccupancyGridConstPtr& msg)
     }
     has_received_map_ = true;
 }
-
-void MCL::scan_callback(const sensor_msgs::LaserScanConstPtr& msg) { scan_ = *msg; }
 
 void MCL::timer_callback(const ros::TimerEvent& event)
 {
@@ -234,6 +363,7 @@ void MCL::measurement_process()
 {
     likelihood_sum_ = 0.0;
     likelihood_average_ = 0.0;
+    std::cout << "measurement" << std::endl;
     for(int i = 0; i < NUM_OF_PARTICLES_; i++){
         particles_[i].measurement_update();
         likelihood_sum_ += particles_[i].likelihood_;
@@ -359,14 +489,14 @@ void MCL::publish_tf()
         tf2::Transform map_transform(q,tf2::Vector3(est_pose_.pose.position.x,est_pose_.pose.position.y,0.0));
         geometry_msgs::PoseStamped tf_stamped;
         tf_stamped.header.frame_id = base_link_frame_id_;
-        tf_stamped.header.stamp = scan_.header.stamp;
+        tf_stamped.header.stamp = current_pose_.header.stamp;
         tf2::toMsg(map_transform.inverse(),tf_stamped.pose);
         geometry_msgs::PoseStamped odom_to_map;
         buffer_->transform(tf_stamped,odom_to_map,odom_frame_id_);
         tf2::Transform latest_tf;
         tf2::convert(odom_to_map.pose,latest_tf);
         geometry_msgs::TransformStamped tmp_tf_stamped;
-        tmp_tf_stamped.header.stamp = scan_.header.stamp;
+        tmp_tf_stamped.header.stamp = current_pose_.header.stamp;
         tmp_tf_stamped.header.frame_id = map_frame_id_;
         tmp_tf_stamped.child_frame_id = odom_frame_id_;
         tf2::convert(latest_tf.inverse(),tmp_tf_stamped.transform);
@@ -409,81 +539,21 @@ double MCL::calc_angle_diff(double a,double b)
     else return d2;
 }
 
-double MCL::calc_range(double x,double y,double yaw)
-{
-    int cx_0 = (x - map_.info.origin.position.x)/map_.info.resolution;
-    int cy_0 = (y - map_.info.origin.position.y)/map_.info.resolution;
-    int cx_1 = (x + MAX_RANGE_*std::cos(yaw) - map_.info.origin.position.x)/map_.info.resolution;
-    int cy_1 = (y + MAX_RANGE_*std::sin(yaw) - map_.info.origin.position.y)/map_.info.resolution;
-
-    bool judge = false;
-    if(std::fabs(cx_1 - cx_0) < std::fabs(cy_1 - cy_0)) judge = true;
-
-    if(judge){
-        int tmp;
-        tmp  = cx_1;
-        cx_1 = cy_1;
-        cy_1 = tmp;
-
-        tmp  = cx_0;
-        cx_0 = cy_0;
-        cy_0 = tmp;
-    }
-
-    int dx = std::fabs(cx_1 - cx_0);
-    int dy = std::fabs(cy_1 - cy_0);
-
-    int cx = cx_0;
-    int cy = cy_0;
-    int error = 0;
-
-    int xstep, ystep;
-    if(cx_1 > cx_0) xstep = 1;
-    else xstep = -1;
-
-    if(cy_1 > cy_0) ystep = 1;
-    else ystep = -1;
-
-    if(judge){
-        if(cy < 0 || cy > (int)map_.info.width || cx < 0 || cx > (int)map_.info.height || map_.data[cx*(int)map_.info.width + cy] != 0){
-            return std::sqrt(std::pow((cx - cx_0),2) + std::pow((cy - cy_0),2)) * map_.info.resolution;
-        }
-    }
-    else{
-        if(cx < 0 || cx > (int)map_.info.width || cy < 0 || cy > (int)map_.info.height || map_.data[cy*(int)map_.info.width + cx] != 0){
-            return std::sqrt(std::pow((cx - cx_0),2) + std::pow((cy - cy_0),2)) * map_.info.resolution;
-        }
-    }
-
-    while(cx != (cx_1 + xstep)){
-        cx += xstep;
-        error += dy;
-        if(2*error >= dx){
-            cy += ystep;
-            error -= dx;
-        }
-        
-        if(judge){
-            if(cy < 0 || cy > (int)map_.info.width || cx < 0 || cx > (int)map_.info.height || map_.data[cx*(int)map_.info.width + cy] != 0){
-                return std::sqrt(std::pow((cx - cx_0),2) + std::pow((cy - cy_0),2)) * map_.info.resolution;
-            }
-        }
-        else{
-            if(cx < 0 || cx > (int)map_.info.width || cy < 0 || cy > (int)map_.info.height || map_.data[cy*(int)map_.info.width + cx] != 0){
-                return std::sqrt(std::pow((cx - cx_0),2) + std::pow((cy - cy_0),2)) * map_.info.resolution;
-            }
-        }
-    }
-    
-    return MAX_RANGE_;
-}
-
 void MCL::process()
 {
     ros::Rate rate(1);
     while(ros::ok()){
-        if(has_received_map_ && !scan_.ranges.empty()){
+        std::cout << x_cov_ << "," << y_cov_ << std::endl;
+        if(has_received_map_){
             if(x_cov_ < X_COV_TH_ || y_cov_ < Y_COV_TH_ || yaw_cov_ < YAW_COV_TH_){
+                x_cov_ = 0.2;
+                y_cov_ = 0.2;
+                yaw_cov_ = 0.2;
+                spread_particles();
+            }
+
+            // 救済措置
+            if(x_cov_ > 1.2 || y_cov_ > 1.2){
                 x_cov_ = 0.2;
                 y_cov_ = 0.2;
                 yaw_cov_ = 0.2;

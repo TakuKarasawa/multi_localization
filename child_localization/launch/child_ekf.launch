@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- topic name -->
+    <arg name="scan_topic_name" default="/scan"/>
+    <arg name="map_topic_name" default="/map"/>
+    <arg name="est_pose_topic_name" default="/est_pose"/>
+    <arg name="est_poses_topic_name" default="/est_poses"/>
+    <arg name="obj_topic_name" default="object_positions"/>
+    <arg name="markers_topic_name" default="/markers"/>
+    <arg name="odom_topic_name" default="roomba/odometry"/>
+
+    <!-- frame id -->
+    <arg name="map_frame_id" default="map"/>
+    <arg name="odom_frame_id" default="odom"/>
+    <arg name="base_link_frame_id" default="base_link"/>
+    <arg name="lidar_frame_id" default="scan"/>
+    <arg name="thetas_frame_id" default="theta_s"/>
+    <arg name="dynamixel_frame_id" default="dynamixel"/>
+    <arg name="realsense_frame_id" default="realsense"/>
+
+    <!-- map server -->
+    <arg name="map_file" default="$(find mcl)/mapdata/map.yaml" />
+    <node pkg="map_server" type="map_server" name="global_map" args="$(arg map_file)" />
+
+    <!-- rviz -->
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find child_localization)/config/rviz/child_ekf.rviz" />
+
+    <!-- child ekf -->
+    <node pkg="child_localization" type="child_ekf_node" name="child_ekf_node">
+        <param name="odom_topic_name" value="$(arg odom_topic_name)"/>
+        <param name="obj_topic_name" value="$(arg obj_topic_name)"/>
+        <param name="pose_topic_name" value="/pose_out"/>
+        <param name="map_frame_id" value="$(arg map_frame_id)"/>
+        <param name="odom_frame_id" value="$(arg odom_frame_id)"/>
+        <param name="base_link_frame_id" value="$(arg base_link_frame_id)"/>
+        <param name="is_odom_tf" value="true"/>
+        <rosparam command="load" file="$(find child_localization)/config/child_ekf/child_ekf.yaml" />
+        <rosparam command="load" file="$(find parent_localization)/config/parent_mcl/object_list.yaml"  />
+    </node>
+
+</launch>

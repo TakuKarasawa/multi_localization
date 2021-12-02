@@ -3,7 +3,8 @@
 ChildEKF::ChildEKF() :
     private_nh_("~"),
     has_received_odom_(false), has_received_obj_(false),
-    is_first_(true)
+    is_first_(true),
+    RANGE_TH_(4.00), count_(0)
 {
     private_nh_.param("odom_topic_name",odom_topic_name_,{"/roombaodom"});
     private_nh_.param("obj_topic_name",obj_topic_name_,{"/object/positions"});
@@ -34,9 +35,95 @@ ChildEKF::ChildEKF() :
     pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(pose_topic_name_,1);
 
     initialize(INIT_X_,INIT_Y_,INIT_YAW_);
+    load_parameter();
 }
 
 ChildEKF::~ChildEKF() { }
+
+std::vector<std::string> ChildEKF::split(std::string& input,char delimiter)
+{
+	std::istringstream stream(input);
+    std::string field;
+    std::vector<std::string> result;
+    while(std::getline(stream,field,delimiter)) result.push_back(field);
+    
+    return result;
+}
+
+void ChildEKF::load_parameter()
+{
+    if(!private_nh_.getParam("object_list",object_list_)){
+        ROS_WARN("Could not load objects list");
+        return;
+    }
+    ROS_ASSERT(object_list_.getType() == XmlRpc::XmlRpcValue::TypeArray);
+    for(int i = 0; i < (int)object_list_.size(); i++){
+        if(!object_list_[i]["name"].valid() || !object_list_[i]["id"].valid() || !object_list_[i]["r"].valid() || !object_list_[i]["g"].valid() || !object_list_[i]["b"].valid()){
+            ROS_WARN("object_list is valid");
+            return;
+        }
+        if(object_list_[i]["name"].getType() == XmlRpc::XmlRpcValue::TypeString && object_list_[i]["r"].getType() == XmlRpc::XmlRpcValue::TypeDouble && object_list_[i]["g"].getType() == XmlRpc::XmlRpcValue::TypeDouble && object_list_[i]["b"].getType() == XmlRpc::XmlRpcValue::TypeDouble){
+            std::string name = static_cast<std::string>(object_list_[i]["name"]);
+            double r = static_cast<double>(object_list_[i]["r"]);
+            double g = static_cast<double>(object_list_[i]["g"]);
+            double b = static_cast<double>(object_list_[i]["b"]);
+            ObjectNode object_node(name,(float)r,(float)g,(float)b);
+            objects_.push_back(object_node);
+        }
+    }
+}
+
+void ChildEKF::read_csv()
+{
+    markers_.markers.clear();
+	std::ifstream ifs_csv_file(dir_path_ + file_name_);
+    std::string line;
+    while(std::getline(ifs_csv_file,line)){
+        std::vector<std::string> strvec = split(line,',');
+
+        visualization_msgs::Marker marker;
+        marker.header.frame_id = map_frame_id_;
+        marker.ns = strvec.at(1);
+        marker.id = count_;
+
+        marker.type = visualization_msgs::Marker::CUBE;
+        marker.action = visualization_msgs::Marker::ADD;
+        marker.lifetime = ros::Duration();
+
+        marker.scale.x = 0.4;
+        marker.scale.y = 0.4;
+        marker.scale.z = 0.6;
+
+        marker.pose.position.x = std::stod(strvec.at(2));
+        marker.pose.position.y = std::stod(strvec.at(3));
+        marker.pose.position.z = 0.0;
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
+
+        bool is_color = false;
+        for(const auto&object : objects_){
+            if(strvec.at(1) == object.name){
+                marker.color.r = object.r;
+                marker.color.g = object.g;
+                marker.color.b = object.b;
+                marker.color.a = 0.5f;
+                is_color = true;
+            }
+            if(is_color) break;
+        }
+
+        if(!is_color){
+            marker.color.r = 1.0f;
+            marker.color.g = 1.0f;
+            marker.color.b = 1.0f;
+            marker.color.a = 1.0f;
+        }
+        markers_.markers.push_back(marker);
+        count_ ++;
+    }
+}
 
 void ChildEKF::odometry_callbak(const nav_msgs::OdometryConstPtr& msg)
 {
@@ -60,13 +147,52 @@ void ChildEKF::odometry_callbak(const nav_msgs::OdometryConstPtr& msg)
 
 void ChildEKF::object_positions_callback(const object_detector_msgs::ObjectPositionsConstPtr& msg)
 {
-    objects_ = *msg;
+    obj_poses_ = *msg;
+
+    // filter
+    measurement_list_.clear();
+    std::vector<ObjectDistance> distances;
+    for(auto&o : obj_poses_.object_position){
+        if(o.Class == "roomba") continue;
+        if(o.Class == "elevator") continue;
+        if(o.Class == "table") continue;
+
+        double distance = std::sqrt(o.x*o.x + o.z*o.z);
+        if(distance > RANGE_TH_) return;
+
+        ObjectDistance object_distance(o.Class,o.x,o.y,o.z);
+        distances.push_back(object_distance);
+    }
+
+    if(distances.size() == 0) return;
+
+    for(auto&d: distances){
+        for(auto&m : markers_.markers){
+            if(d.name_ == m.ns){
+                double distance = std::sqrt(std::pow(m.pose.position.x - MU_(0),2) + std::pow(m.pose.position.y - MU_(1),2));
+                double error = std::sqrt(std::pow(distance - d.distance_,2));
+                ObjectError object_error(m.id,error);
+                d.push_object_error(object_error);
+            }
+        }
+        d.sort_object_error();
+    }   
+
+    for(auto&d : distances){
+        for(auto&m : markers_.markers){
+            if(d.object_errors_[0].id_ == m.id){
+                if(d.distance_ <= RANGE_TH_ && d.object_errors_[0].error_ < 1){
+                    double diff = d.distance_;
+                    double phi = d.theta_;
+                    MeasurementList list(d.object_errors_[0].id_,diff,phi);
+                    measurement_list_.push_back(list);
+                    d.object_errors_.erase(d.object_errors_.begin());
+                }
+            }
+        }
+    }
+
     has_received_obj_ = true;
-}
-
-void ChildEKF::timer_callback(const ros::TimerEvent& event)
-{
-
 }
 
 void ChildEKF::initialize(double x,double y,double yaw)
@@ -105,7 +231,7 @@ void ChildEKF::publish_pose()
 void ChildEKF::motion_update(double dt)
 {
     double nu = odom_.twist.twist.linear.x;
-    double omega = odom_.twist.twist.angular.z;
+    double omega = 0.8*odom_.twist.twist.angular.z;
 
     if(std::fabs(omega) < 1e-5) omega = 1e-10;
 
@@ -143,19 +269,72 @@ void ChildEKF::motion_update(double dt)
 		MU_(2) += omega*dt;
 	}
 
+    // state transition
+    
+
     SIGMA_ = G*SIGMA_*G.transpose() + A*M*A.transpose();
 }
 
 void ChildEKF::measurement_update()
 {
-    // Q
-    Eigen::Matrix2d Q;
-    Q.setZero(0,0);
+    for(auto&ml : measurement_list_){
+        // I
+        Eigen::Matrix3d I;
+        I.setIdentity();
 
-    Eigen::Vector3d Z;
-    Z.setZero();
+        // Q
+        Eigen::Matrix2d Q;
+        Q.setZero();
+        Q(0,0) = std::pow(ml.distance_*DISTANCE_NOISE_RATE_,2);
+        Q(1,1) = std::pow(DIRECTION_NOISE_,2);
 
+        // H
+        Eigen::Matrix<double,2,3> H;
+        H.setZero();
+        double measured_x;
+        double measured_y;
+        double diff_x;
+        double diff_y;
+        double phi;
+        for(auto&m : markers_.markers){
+            if(ml.id_ == m.id){
+                diff_x = m.pose.position.x - MU_(0);
+                diff_y = m.pose.position.y - MU_(1);
+                phi = std::atan2(diff_y,diff_x) - MU_(2);
 
+                while(phi >= M_PI) phi -= 2*M_PI;
+                while(phi < -M_PI) phi += 2*M_PI;
+                
+                break;
+            }
+        }
+        H(0,0) = (MU_(0) - measured_x)/std::sqrt(ml.distance_);
+        H(0,1) = (MU_(1) - measured_y)/std::sqrt(ml.distance_);
+        H(0,2) = 0.0;
+        H(1,0) = (MU_(1) - measured_y)/ml.distance_;
+        H(1,1) = (MU_(0) - measured_x)/ml.distance_;
+        H(1,2) = -1.0;
+
+        // K
+        Eigen::Matrix<double,3,2> K;
+        K.setZero();
+        K = SIGMA_*H.transpose()*(Q + H*SIGMA_*H.transpose()).inverse();
+
+        // Z
+        Eigen::Vector2d Z;
+        Z.setZero();
+        Z(0) = ml.distance_;
+        Z(1) = ml.theta_;
+
+        // Z'
+        Eigen::Vector2d Z_hat;
+        Z_hat.setZero();
+        Z_hat(0) = std::sqrt(diff_x*diff_x + diff_y*diff_y);
+        Z_hat(1) = phi;
+
+        MU_ += K*(Z - Z_hat);
+        SIGMA_ = (I - K*H)*SIGMA_;
+    }
 }
 
 void ChildEKF::publish_tf()
@@ -205,6 +384,7 @@ void ChildEKF::process()
 {
     ros::Rate rate(HZ_);
     double dt;
+    read_csv();
     now_time_ = ros::Time::now();
     while(ros::ok()){
         if(has_received_odom_){
