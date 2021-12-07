@@ -12,6 +12,7 @@ MCL::MCL() :
 {
     private_nh_.param("file_name",file_name_,{"arrange_1.csv"});
     private_nh_.param("obj_poses_topic_name",obj_poses_topic_name_,{"/object_positions"});
+    private_nh_.param("markers_topic_name",markers_topic_name_,{"/markers"});
 
     private_nh_.param("map_topic_name",map_topic_name_,{"/map"});
     private_nh_.param("est_pose_topic_name",est_pose_topic_name_,{"est_pose"});
@@ -57,6 +58,7 @@ MCL::MCL() :
 
     est_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(est_pose_topic_name_,1);
     est_poses_pub_ = nh_.advertise<geometry_msgs::PoseArray>(est_poses_topic_name_,1);
+    markers_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(markers_topic_name_,1);
 
     // initialize
     est_pose_.header.frame_id = map_frame_id_;
@@ -69,6 +71,9 @@ MCL::MCL() :
     broadcaster_.reset(new tf2_ros::TransformBroadcaster);
     buffer_.reset(new tf2_ros::Buffer);
     listener_.reset(new tf2_ros::TransformListener(*buffer_));
+
+    load_parameter();
+    read_csv();
 }
 
 MCL::~MCL() {}
@@ -172,24 +177,32 @@ void MCL::Particle::measurement_update()
 
     for(auto&d : distances){
         for(auto&m : m_->markers_.markers){
-            if(d.obejct_errors[0].id == m.id  && d.obejct_errors[0].error < 3){
+            if(d.obejct_errors[0].id == m.id  && d.obejct_errors[0].error < 3.0 ){
                 double distance = std::sqrt(std::pow(m.pose.position.x - pose_.pose.position.x,2) + std::pow(m.pose.position.y - pose_.pose.position.y,2));
-                double direction = m_->calc_yaw_from_quat(pose_.pose.orientation) - std::atan2(m.pose.position.y - pose_.pose.position.y,m.pose.position.x - pose_.pose.position.x);
+                //double direction = m_->calc_yaw_from_quat(pose_.pose.orientation) - std::atan2(m.pose.position.y - pose_.pose.position.y,m.pose.position.x - pose_.pose.position.x);
+                double direction = std::atan2(m.pose.position.y - pose_.pose.position.y,m.pose.position.x - pose_.pose.position.x) - m_->calc_yaw_from_quat(pose_.pose.orientation);
                 Eigen::Vector2d mean;
+                mean.setZero();
                 mean(0) = distance;
-                mean(1) = direction;
-                Eigen::MatrixX2d cov;
+                mean(1) = direction;                
+                //std::cout << "mean: " << mean << std::endl;
+
+                Eigen::Matrix2d cov;
                 cov.setZero();
                 cov(0,0) = std::pow(distance*m_->DISTANCE_DEV_RATE_,2);
                 cov(1,1) = std::pow(m_->DIRECTION_DEV_,2);
+                //std::cout << "cov: " << cov << std::endl;
+                
                 MultivariateNormal multivariate_normal(mean,cov);
                 Eigen::Vector2d x;
+                x.setZero();
                 x(0) = d.distance;
                 x(1) = d.theta;
                 likelihood_ += multivariate_normal.pdf(x);
             }
         }
     }
+
 }
 
 std::vector<std::string> MCL::split(std::string& input,char delimiter)
@@ -303,6 +316,8 @@ void MCL::map_callback(const nav_msgs::OccupancyGridConstPtr& msg)
 
 void MCL::timer_callback(const ros::TimerEvent& event)
 {
+    markers_pub_.publish(markers_);
+
     geometry_msgs::TransformStamped transform_stamped;
     try{
         transform_stamped = buffer_->lookupTransform(odom_frame_id_,base_link_frame_id_,ros::Time(0));
@@ -543,25 +558,27 @@ void MCL::process()
 {
     ros::Rate rate(1);
     while(ros::ok()){
-        std::cout << x_cov_ << "," << y_cov_ << std::endl;
         if(has_received_map_){
             if(x_cov_ < X_COV_TH_ || y_cov_ < Y_COV_TH_ || yaw_cov_ < YAW_COV_TH_){
-                x_cov_ = 0.2;
-                y_cov_ = 0.2;
+                x_cov_ = 0.3;
+                y_cov_ = 0.3;
                 yaw_cov_ = 0.2;
                 spread_particles();
             }
 
             // 救済措置
             if(x_cov_ > 1.2 || y_cov_ > 1.2){
-                x_cov_ = 0.2;
-                y_cov_ = 0.2;
+                x_cov_ = 0.3;
+                y_cov_ = 0.3;
                 yaw_cov_ = 0.2;
                 spread_particles();
             }
             
             motion_process();
-            measurement_process();
+            if(has_received_obj_){
+                measurement_process();
+                has_received_obj_ = false;
+            }
             calc_likelihood();
 
             if(is_update_){

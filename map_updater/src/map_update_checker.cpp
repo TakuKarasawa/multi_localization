@@ -105,7 +105,7 @@ void MapUpdateChecker::read_csv(visualization_msgs::MarkerArray& markers)
                 marker.color.r = object.r;
                 marker.color.g = object.g;
                 marker.color.b = object.b;
-                marker.color.a = 0.5f;
+                marker.color.a = 1.0f;
                 is_color = true;
             }
             if(is_color) break;

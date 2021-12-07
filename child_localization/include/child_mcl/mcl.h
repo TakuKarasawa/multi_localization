@@ -144,6 +144,7 @@ protected:
     ros::Subscriber obj_poses_sub_;
     ros::Publisher est_pose_pub_;
     ros::Publisher est_poses_pub_;
+    ros::Publisher markers_pub_;
 
     std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
     std::shared_ptr<tf2_ros::TransformListener> listener_;
@@ -170,6 +171,7 @@ protected:
     std::string dir_path_ = "/home/amsl/catkin_ws/src/multi_localization/child_localization/record/";
     std::string file_name_;
     std::string obj_poses_topic_name_;
+    std::string markers_topic_name_;
     
     std::string map_topic_name_;
     std::string est_pose_topic_name_;

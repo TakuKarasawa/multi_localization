@@ -6,7 +6,7 @@
 
     <!-- marker update checker -->
 	<node pkg="map_updater" type="map_update_checker" name="map_update_checker" output="screen" >
-        <param name="file_name" value="arrange_1.csv" />
+        <param name="file_name" value="arrange_1_fig.csv" />
         <param name="marker_frame_id" value="map"/>
         <rosparam command="load" file="$(find map_updater)/config/object/object_list.yaml"/>
     </node>

@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <sstream>
 #include <fstream>
@@ -8,10 +9,10 @@
 class PoseRecorder
 {
 public:
-	PoseRecorder() : 
+	PoseRecorder() :
 		private_nh_("~"),
 		is_first_(true), has_received_odom_(false), has_received_mcl_pose_(false)
-	{	
+	{
 		private_nh_.param("odom_topic_name",odom_topic_name_,{"/roomba/odometry"});
 		private_nh_.param("mcl_pose_topic_name",mcl_pose_topic_name_,{"/est_pose"});
 
@@ -30,10 +31,10 @@ public:
 				is_first_ = false;
 			}
 
-			static std::ofstream ofs("/home/amsl/catkin_ws/src//multi_localization/pose_recorder/record/record_1.csv");
-			ofs << ros::Time::now().toSec() - start_time_.toSec() << "," 
-			    << odom_.pose.pose.position.x << "," << odom_.pose.pose.position.y << ","
-			    << mcl_pose_.pose.position.x << "," << mcl_pose_.pose.position.y << std::endl;
+			static std::ofstream ofs("/home/amsl/catkin_ws/src//multi_localization/pose_recorder/record/record_7.csv");
+			ofs << ros::Time::now().toSec() - start_time_.toSec() << ","
+			    << odom_.pose.pose.position.x << "," << odom_.pose.pose.position.y << "," << calc_yaw_from_msg(odom_.pose.pose.orientation) << ","
+			    << mcl_pose_.pose.position.x << "," << mcl_pose_.pose.position.y << calc_yaw_from_msg(mcl_pose_.pose.orientation) << std::endl;
 
 			ros::spinOnce();
 			rate.sleep();
@@ -44,7 +45,7 @@ private:
 	void odom_callback(const nav_msgs::OdometryConstPtr& msg)
 	{
 		odom_ = *msg;
-		has_received_odom_ = true; 
+		has_received_odom_ = true;
 	}
 
 	void mcl_pose_callback(const geometry_msgs::PoseStampedConstPtr& msg)
@@ -52,6 +53,15 @@ private:
 		mcl_pose_ = *msg;
 		has_received_mcl_pose_ = true;
 	}
+
+    double calc_yaw_from_msg(geometry_msgs::Quaternion q)
+    {
+        double roll, pitch, yaw;
+        tf2::Quaternion tf_q(q.x,q.y,q.z,q.w);
+        tf2::Matrix3x3(tf_q).getRPY(roll,pitch,yaw);
+
+        return yaw;
+    }
 
 	ros::NodeHandle nh_;
 	ros::NodeHandle private_nh_;

@@ -9,6 +9,9 @@
     <arg name="odom_topic_name" default="roomba/odometry" />
     <arg name="est_pose_topic_name" default="/est_pose" />
     <arg name="est_poses_topic_name" default="/est_poses" />
+    
+    <arg name="obj_poses_topic_name" default="/object_positions" />
+    <arg name="markers_topic_name" default="/markers" /> 
 
     <!-- frame_id -->
     <arg name="map_frame_id" default="map" />
@@ -28,6 +31,8 @@
 
     <!-- mcl -->
     <node pkg="child_localization" type="mcl_node" name="mcl_node" output="screen" >
+        <param name="markers_topic_name" value="$(arg markers_topic_name)" />
+
         <param name="map_topic_name" value="$(arg map_topic_name)" />
         <param name="est_pose_topic_name" value="$(arg est_pose_topic_name)" />
         <param name="est_poses_topic_name" value="$(arg est_poses_topic_name)" />
